@@ -1,0 +1,219 @@
+/* src/components/dashboard/DashboardSummary.css */
+.dashboard-summary {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
+  
+  .dashboard-summary:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+  
+  .date-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .date-display h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .completion-badge {
+    background-color: #e7f7ee;
+    color: #2e7d52;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  
+  .completion-badge span {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  
+  .summary-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .stat-card {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-2px);
+    background-color: #f5f5f5;
+  }
+  
+  .stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    margin-right: 12px;
+    color: white;
+  }
+  
+  .task-icon {
+    background-color: #4a6cf7;
+  }
+  
+  .habit-icon {
+    background-color: #6c5ce7;
+  }
+  
+  .event-icon {
+    background-color: #00b894;
+  }
+  
+  .stat-info {
+    flex: 1;
+  }
+  
+  .stat-info h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    line-height: 1;
+  }
+  
+  .stat-info p {
+    margin: 4px 0 0;
+    font-size: 0.85rem;
+    color: #666;
+  }
+  
+  .motivation-quote {
+    background-color: #f9f9f9;
+    border-left: 4px solid #4a6cf7;
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin-top: 8px;
+  }
+  
+  .motivation-quote blockquote {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #555;
+    font-style: italic;
+    line-height: 1.5;
+  }
+  
+  .motivation-quote footer {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #777;
+    text-align: right;
+    font-style: normal;
+  }
+  
+  /* Loading state */
+  .dashboard-summary.loading {
+    min-height: 250px;
+  }
+  
+  .skeleton-loader {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+  }
+  
+  .date-skeleton {
+    height: 24px;
+    width: 70%;
+    margin-bottom: 20px;
+  }
+  
+  .icon-skeleton {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    margin-right: 12px;
+  }
+  
+  .title-skeleton {
+    height: 24px;
+    width: 40px;
+    margin-bottom: 8px;
+  }
+  
+  .subtitle-skeleton {
+    height: 16px;
+    width: 80px;
+  }
+  
+  .quote-skeleton {
+    height: 60px;
+    margin-top: 24px;
+  }
+  
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  /* Error state */
+  .dashboard-summary.error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 250px;
+  }
+  
+  .error-message {
+    text-align: center;
+    color: #e74c3c;
+  }
+  
+  .error-message button {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 6px 12px;
+    border-radius: 4px;
+    margin-top: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .error-message button:hover {
+    background-color: #e9ecef;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .summary-stats {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    
+    .date-display {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .completion-badge {
+      margin-top: 8px;
+    }
+  }
+  

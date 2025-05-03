@@ -1,0 +1,288 @@
+/* src/pages/HomePage.css */
+.home-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    color: #333;
+  }
+  
+  .welcome-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .welcome-text h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2d3748;
+  }
+  
+  .date-display {
+    margin: 0.5rem 0 0;
+    color: #718096;
+    font-size: 0.95rem;
+  }
+  
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-areas:
+      "summary summary"
+      "activity activity"
+      "tasks events"
+      "goals goals";
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  
+  .dashboard-summary-wrapper {
+    grid-area: summary;
+  }
+  
+  .contribution-section {
+    grid-area: activity;
+  }
+  
+  .tasks-section {
+    grid-area: tasks;
+  }
+  
+  .calendar-section {
+    grid-area: events;
+  }
+  
+  .goals-section {
+    grid-area: goals;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .section-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2d3748;
+  }
+  
+  .view-all {
+    font-size: 0.9rem;
+    color: #4a6cf7;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  
+  .view-all:hover {
+    color: #3a5ce5;
+    text-decoration: underline;
+  }
+  
+  .features-heading {
+    margin: 0 0 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2d3748;
+  }
+  
+  .feature-navigation {
+    margin-top: 3rem;
+  }
+  
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .feature-card {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .feature-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    margin-right: 1rem;
+    color: white;
+    font-size: 1.25rem;
+  }
+  
+  .icon-tasks {
+    background-color: #4a6cf7;
+  }
+  
+  .icon-habits {
+    background-color: #6c5ce7;
+  }
+  
+  .icon-goals {
+    background-color: #00b894;
+  }
+  
+  .icon-notes {
+    background-color: #fdcb6e;
+  }
+  
+  .icon-todo {
+    background-color: #e17055;
+  }
+  
+  .icon-calendar {
+    background-color: #0984e3;
+  }
+  
+  .icon-projects {
+    background-color: #6c5ce7;
+  }
+  
+  .icon-analytics {
+    background-color: #00cec9;
+  }
+  
+  .feature-content h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d3748;
+  }
+  
+  .feature-content p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #718096;
+  }
+  
+  /* Loading state */
+  .home-container.loading {
+    min-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .loading-overlay {
+    text-align: center;
+  }
+  
+  .loading-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(74, 108, 247, 0.3);
+    border-radius: 50%;
+    border-top-color: #4a6cf7;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* Error state */
+  .home-container.error {
+    min-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .error-message {
+    text-align: center;
+    max-width: 500px;
+  }
+  
+  .error-message h2 {
+    color: #e53e3e;
+    margin-bottom: 1rem;
+  }
+  
+  .error-message p {
+    margin-bottom: 1.5rem;
+    color: #718096;
+  }
+  
+  .error-message button {
+    background-color: #4a6cf7;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .error-message button:hover {
+    background-color: #3a5ce5;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 992px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "summary"
+        "activity"
+        "tasks"
+        "events"
+        "goals";
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .home-container {
+      padding: 1.5rem;
+    }
+    
+    .welcome-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .welcome-header > div:last-child {
+      margin-top: 1rem;
+      align-self: flex-end;
+    }
+    
+    .feature-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .home-container {
+      padding: 1rem;
+    }
+    
+    .welcome-text h1 {
+      font-size: 1.5rem;
+    }
+  }
+  

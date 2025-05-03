@@ -1,0 +1,452 @@
+/* src/components/goals/GoalProgress.css */
+.goal-progress-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.goal-progress-container:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.goal-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.goal-progress-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.view-all-goals {
+  color: #4a6cf7;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.view-all-goals:hover {
+  color: #3a5ce5;
+  text-decoration: underline;
+}
+
+.overall-progress {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.progress-circle-container {
+  margin-right: 20px;
+}
+
+.progress-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.progress-inner {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-percentage {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.progress-info h4 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.progress-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.no-goals {
+  text-align: center;
+  padding: 24px 0;
+}
+
+.no-goals p {
+  margin: 0 0 16px;
+  color: #666;
+}
+
+.add-goal-btn {
+  display: inline-block;
+  background-color: #4a6cf7;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.add-goal-btn:hover {
+  background-color: #3a5ce5;
+}
+
+.goal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.goal-item {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 16px;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.goal-item:hover {
+  transform: translateY(-2px);
+  background-color: #f5f5f5;
+}
+
+.goal-details h4 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.goal-details p {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goal-progress {
+  margin-top: 8px;
+}
+
+.progress-bar-container {
+  height: 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #4a6cf7;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.update-progress-btn {
+  background-color: transparent;
+  color: #4a6cf7;
+  border: 1px solid #4a6cf7;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.update-progress-btn:hover {
+  background-color: #4a6cf7;
+  color: white;
+}
+
+.more-goals {
+  display: block;
+  text-align: center;
+  color: #4a6cf7;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #f0f4ff;
+  text-decoration: none;
+  margin-top: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.more-goals:hover {
+  background-color: #e0e8ff;
+}
+
+/* Progress Update Modal */
+.progress-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.progress-modal {
+  background-color: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background-color: #e9ecef;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-body h4 {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  color: #333;
+}
+
+.progress-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.progress-slider {
+  flex: 1;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e9ecef;
+  border-radius: 4px;
+  outline: none;
+}
+
+.progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4a6cf7;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 0 0 1px #4a6cf7;
+}
+
+.progress-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4a6cf7;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 0 0 1px #4a6cf7;
+}
+
+.progress-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  min-width: 50px;
+  text-align: right;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  color: #666;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #e9ecef;
+}
+
+.save-btn {
+  background-color: #4a6cf7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.save-btn:hover {
+  background-color: #3a5ce5;
+}
+
+.save-btn:disabled,
+.cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading state */
+.goal-progress-container.loading {
+  min-height: 300px;
+}
+
+.header-skeleton {
+  height: 24px;
+  width: 60%;
+  margin-bottom: 20px;
+}
+
+.progress-skeleton {
+  height: 80px;
+  margin-bottom: 24px;
+}
+
+.goal-list-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.goal-item-skeleton {
+  height: 80px;
+  border-radius: 8px;
+}
+
+.skeleton-loader {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Error state */
+.goal-progress-container.error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.error-message {
+  text-align: center;
+  color: #e74c3c;
+}
+
+.error-message button {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-top: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.error-message button:hover {
+  background-color: #e9ecef;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .goal-progress-container {
+    padding: 16px;
+  }
+  
+  .progress-circle {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .progress-inner {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .progress-percentage {
+    font-size: 0.9rem;
+  }
+}
