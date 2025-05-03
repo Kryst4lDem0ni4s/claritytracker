@@ -1,6 +1,6 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
@@ -8,11 +8,11 @@ import LoginPage from './pages/LoginPage';
 import TasksPage from './pages/TasksPage';
 import HabitsPage from './pages/HabitsPage';
 import GoalsPage from './pages/GoalsPage';
-import NotesPage from './pages/NotesPage';
+// import NotesPage from './pages/NotesPage';
 import TodoPage from './pages/TodoPage';
-import CalendarPage from './pages/CalendarPage';
-import ProjectsPage from './pages/ProjectsPage';
-import AnalyticsPage from './pages/AnalyticsPage';
+// import CalendarPage from './pages/CalendarPage';
+// import ProjectsPage from './pages/ProjectsPage';
+// import AnalyticsPage from './pages/AnalyticsPage';
 import './App.css';
 
 // Auth context to manage user state across the app
@@ -105,15 +105,15 @@ function App() {
                   isAuthenticated ? <GoalsPage /> : <Navigate to="/login" />
                 } />
                 
-                <Route path="/notes" element={
+                {/* <Route path="/notes" element={
                   isAuthenticated ? <NotesPage /> : <Navigate to="/login" />
-                } />
+                } /> */}
                 
                 <Route path="/todo" element={
                   isAuthenticated ? <TodoPage /> : <Navigate to="/login" />
                 } />
                 
-                <Route path="/calendar" element={
+                {/* <Route path="/calendar" element={
                   isAuthenticated ? <CalendarPage /> : <Navigate to="/login" />
                 } />
                 
@@ -124,7 +124,7 @@ function App() {
                 <Route path="/analytics" element={
                   isAuthenticated ? <AnalyticsPage /> : <Navigate to="/login" />
                 } />
-                
+                 */}
                 {/* Catch-all redirect */}
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>

@@ -4,11 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, Boolean, Text, DateTime, func, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import os
 from typing import List, Optional
 import uvicorn
-from models import GoalProgressUpdate, GoalUpdate, HabitActivity, Project, TaskCategory, TaskCategoryCreate, TaskCategoryResponse, TaskReorderRequest, TaskUpdate, User, UserCreate, TaskCreate, Task, HabitCreate, Habit, GoalCreate, Goal, UserResponse, NoteCreate, Note, TodoItemCreate, TodoItem, CalendarEventCreate, CalendarEvent, ProjectCreate, ProjectResponse, HabitResponse, TaskResponse, GoalResponse, NoteResponse, TodoItemResponse, CalendarEventResponse
+from models import GoalProgressUpdate, GoalUpdate, HabitActivity, Project, TaskCategory, TaskCategoryCreate, TaskCategoryResponse, TaskReorderRequest, TaskUpdate, TodoItemUpdate, User, UserCreate, TaskCreate, Task, HabitCreate, Habit, GoalCreate, Goal, UserResponse, NoteCreate, Note, TodoItemCreate, TodoItem, CalendarEventCreate, CalendarEvent, ProjectCreate, ProjectResponse, HabitResponse, TaskResponse, GoalResponse, NoteResponse, TodoItemResponse, CalendarEventResponse
 from pydantic import BaseModel
 
 app = FastAPI()

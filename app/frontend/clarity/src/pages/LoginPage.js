@@ -33,11 +33,18 @@ const LoginPage = () => {
         body: JSON.stringify({ username, password })
       });
       
+      const contentType = response.headers.get("content-type");
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Authentication failed');
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Authentication failed');
+        }
+        throw new Error('Authentication failed');
       }
       
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error('Invalid server response');
+      }
       const userData = await response.json();
       login(userData);
     } catch (err) {

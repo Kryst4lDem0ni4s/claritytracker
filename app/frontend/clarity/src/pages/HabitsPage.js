@@ -10,7 +10,7 @@ const HabitsPage = () => {
   const [habits, setHabits] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedHabit, setSelectedHabit] = useState(null);
+//   const [selectedHabit, setSelectedHabit] = useState(null);
   const [editingHabitId, setEditingHabitId] = useState(null);
   const [editText, setEditText] = useState('');
   const [filter, setFilter] = useState('all'); // all, daily, weekly, monthly
