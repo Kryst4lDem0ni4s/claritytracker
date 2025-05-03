@@ -1,14 +1,14 @@
 # app/backend/main.py
 from fastapi import Body, FastAPI, HTTPException, Depends, Query, status
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, Boolean, Text, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, Boolean, Text, DateTime, func, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from datetime import datetime, timedelta
 import os
 from typing import List, Optional
 import uvicorn
-from models import HabitActivity, Project, User, UserCreate, TaskCreate, Task, HabitCreate, Habit, GoalCreate, Goal, UserResponse, NoteCreate, Note, TodoItemCreate, TodoItem, CalendarEventCreate, CalendarEvent, ProjectCreate, ProjectResponse, HabitResponse, TaskResponse, GoalResponse, NoteResponse, TodoItemResponse, CalendarEventResponse
+from models import GoalProgressUpdate, GoalUpdate, HabitActivity, Project, TaskCategory, TaskCategoryCreate, TaskCategoryResponse, TaskReorderRequest, TaskUpdate, User, UserCreate, TaskCreate, Task, HabitCreate, Habit, GoalCreate, Goal, UserResponse, NoteCreate, Note, TodoItemCreate, TodoItem, CalendarEventCreate, CalendarEvent, ProjectCreate, ProjectResponse, HabitResponse, TaskResponse, GoalResponse, NoteResponse, TodoItemResponse, CalendarEventResponse
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -69,17 +69,86 @@ def login_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     return db_user
 
-# Task endpoints
+
+# Task category endpoints
+@app.post("/api/users/{user_id}/task-categories", response_model=TaskCategoryResponse, status_code=status.HTTP_201_CREATED)
+def create_task_category(user_id: int, category: TaskCategoryCreate, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    db_category = TaskCategory(
+        user_id=user_id,
+        name=category.name,
+        color=category.color
+    )
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+@app.get("/api/users/{user_id}/task-categories", response_model=List[TaskCategoryResponse])
+def get_task_categories(user_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    categories = db.query(TaskCategory).filter(TaskCategory.user_id == user_id).all()
+    return categories
+
+@app.put("/api/users/{user_id}/task-categories/{category_id}", response_model=TaskCategoryResponse)
+def update_task_category(user_id: int, category_id: int, category: TaskCategoryCreate, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    db_category = db.query(TaskCategory).filter(
+        TaskCategory.id == category_id, 
+        TaskCategory.user_id == user_id
+    ).first()
+    
+    if db_category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    db_category.name = category.name
+    db_category.color = category.color
+    
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+@app.delete("/api/users/{user_id}/task-categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task_category(user_id: int, category_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    db_category = db.query(TaskCategory).filter(
+        TaskCategory.id == category_id, 
+        TaskCategory.user_id == user_id
+    ).first()
+    
+    if db_category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    # Update tasks that use this category to have no category
+    db.query(Task).filter(
+        Task.category_id == category_id,
+        Task.user_id == user_id
+    ).update({"category_id": None})
+    
+    db.delete(db_category)
+    db.commit()
+    return None
+
+# Enhanced task endpoints
 @app.post("/api/users/{user_id}/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
 def create_task(user_id: int, task: TaskCreate, db: Session = Depends(get_db)):
     get_user_or_404(db, user_id)
+    
+    # Get the highest order value to place new task at the end
+    highest_order = db.query(func.max(Task.order)).filter(Task.user_id == user_id).scalar() or -1
     
     db_task = Task(
         user_id=user_id,
         title=task.title,
         description=task.description,
         due_date=task.due_date,
-        completed=task.completed
+        completed=task.completed,
+        priority=task.priority,
+        category_id=task.category_id,
+        order=highest_order + 1
     )
     db.add(db_task)
     db.commit()
@@ -87,44 +156,185 @@ def create_task(user_id: int, task: TaskCreate, db: Session = Depends(get_db)):
     return db_task
 
 @app.get("/api/users/{user_id}/tasks", response_model=List[TaskResponse])
-def get_tasks(user_id: int, db: Session = Depends(get_db)):
+def get_tasks(
+    user_id: int, 
+    completed: Optional[bool] = None,
+    category_id: Optional[int] = None,
+    due_date_from: Optional[date] = None,
+    due_date_to: Optional[date] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     get_user_or_404(db, user_id)
-    tasks = db.query(Task).filter(Task.user_id == user_id).all()
+    
+    query = db.query(Task).filter(Task.user_id == user_id)
+    
+    # Apply filters
+    if completed is not None:
+        query = query.filter(Task.completed == completed)
+    
+    if category_id is not None:
+        if category_id == 0:  # Special case for uncategorized tasks
+            query = query.filter(Task.category_id == None)
+        else:
+            query = query.filter(Task.category_id == category_id)
+    
+    if due_date_from is not None:
+        query = query.filter(Task.due_date >= due_date_from)
+    
+    if due_date_to is not None:
+        query = query.filter(Task.due_date <= due_date_to)
+    
+    if search is not None and search.strip():
+        search_term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Task.title.ilike(search_term),
+                Task.description.ilike(search_term)
+            )
+        )
+    
+    # Order by order field, then by due date, then by creation date
+    tasks = query.order_by(Task.order, Task.due_date, Task.created_at).all()
     return tasks
 
 @app.get("/api/users/{user_id}/tasks/{task_id}", response_model=TaskResponse)
 def get_task(user_id: int, task_id: int, db: Session = Depends(get_db)):
     get_user_or_404(db, user_id)
-    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
+    
+    task = db.query(Task).filter(
+        Task.id == task_id, 
+        Task.user_id == user_id
+    ).first()
+    
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    
     return task
 
 @app.put("/api/users/{user_id}/tasks/{task_id}", response_model=TaskResponse)
-def update_task(user_id: int, task_id: int, task: TaskCreate, db: Session = Depends(get_db)):
+def update_task(user_id: int, task_id: int, task_update: TaskUpdate, db: Session = Depends(get_db)):
     get_user_or_404(db, user_id)
-    db_task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
-    if db_task is None:
+    
+    task = db.query(Task).filter(
+        Task.id == task_id, 
+        Task.user_id == user_id
+    ).first()
+    
+    if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    # Update task fields
-    for key, value in task.dict().items():
-        setattr(db_task, key, value)
+    # Update only the fields that are provided
+    update_data = task_update.dict(exclude_unset=True)
+    
+    # Check if task is being marked as completed
+    was_completed = task.completed
+    will_be_completed = update_data.get('completed', was_completed)
+    
+    for key, value in update_data.items():
+        setattr(task, key, value)
+    
+    # If task is being marked as completed, update the updated_at timestamp
+    if not was_completed and will_be_completed:
+        task.updated_at = datetime.utcnow()
     
     db.commit()
-    db.refresh(db_task)
-    return db_task
+    db.refresh(task)
+    return task
 
 @app.delete("/api/users/{user_id}/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(user_id: int, task_id: int, db: Session = Depends(get_db)):
     get_user_or_404(db, user_id)
-    db_task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
-    if db_task is None:
+    
+    task = db.query(Task).filter(
+        Task.id == task_id, 
+        Task.user_id == user_id
+    ).first()
+    
+    if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    db.delete(db_task)
+    db.delete(task)
     db.commit()
     return None
+
+@app.put("/api/users/{user_id}/tasks/reorder", status_code=status.HTTP_200_OK)
+def reorder_tasks(user_id: int, reorder_data: TaskReorderRequest, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    # Update each task's order
+    for item in reorder_data.taskIds:
+        task = db.query(Task).filter(
+            Task.id == item.id, 
+            Task.user_id == user_id
+        ).first()
+        
+        if task:
+            task.order = item.order
+    
+    db.commit()
+    return {"message": "Tasks reordered successfully"}
+
+# Habit models
+class Habit(Base):
+    __tablename__ = "habits"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    title = Column(String, index=True)
+    description = Column(Text, nullable=True)
+    frequency = Column(String)  # daily, weekly, monthly
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", backref="habits")
+
+class HabitActivity(Base):
+    __tablename__ = "habit_activities"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    habit_id = Column(Integer, ForeignKey('habits.id'))
+    date = Column(Date, index=True)
+    status = Column(String)  # done, skipped, none
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = relationship("User", backref="habit_activities")
+    habit = relationship("Habit", backref="activities")
+
+# Pydantic models for habits
+class HabitBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    frequency: str  # daily, weekly, monthly
+
+class HabitCreate(HabitBase):
+    pass
+
+class HabitUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    frequency: Optional[str] = None
+
+class HabitResponse(HabitBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+# Pydantic models for habit activities
+class HabitActivityCreate(BaseModel):
+    date: date
+    status: str  # done, skipped, none
+
+class HabitActivityResponse(BaseModel):
+    id: int
+    habit_id: int
+    date: date
+    status: str
+    
+    class Config:
+        orm_mode = True
 
 # Habit endpoints
 @app.post("/api/users/{user_id}/habits", response_model=HabitResponse, status_code=status.HTTP_201_CREATED)
@@ -134,6 +344,7 @@ def create_habit(user_id: int, habit: HabitCreate, db: Session = Depends(get_db)
     db_habit = Habit(
         user_id=user_id,
         title=habit.title,
+        description=habit.description,
         frequency=habit.frequency
     )
     db.add(db_habit)
@@ -142,82 +353,243 @@ def create_habit(user_id: int, habit: HabitCreate, db: Session = Depends(get_db)
     return db_habit
 
 @app.get("/api/users/{user_id}/habits", response_model=List[HabitResponse])
-def get_habits(user_id: int, db: Session = Depends(get_db)):
-    get_user_or_404(db, user_id)
-    habits = db.query(Habit).filter(Habit.user_id == user_id).all()
-    return habits
-
-@app.post("/api/users/{user_id}/habits/{habit_id}/track", status_code=status.HTTP_201_CREATED)
-def track_habit(user_id: int, habit_id: int, date: str = None, db: Session = Depends(get_db)):
+def get_habits(
+    user_id: int, 
+    frequency: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     get_user_or_404(db, user_id)
     
-    habit = db.query(Habit).filter(Habit.id == habit_id, Habit.user_id == user_id).first()
+    query = db.query(Habit).filter(Habit.user_id == user_id)
+    
+    if frequency:
+        query = query.filter(Habit.frequency == frequency)
+    
+    habits = query.order_by(Habit.created_at).all()
+    return habits
+
+@app.get("/api/users/{user_id}/habits/{habit_id}", response_model=HabitResponse)
+def get_habit(user_id: int, habit_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    habit = db.query(Habit).filter(
+        Habit.id == habit_id, 
+        Habit.user_id == user_id
+    ).first()
+    
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
     
-    # Use provided date or today
-    activity_date = datetime.strptime(date, "%Y-%m-%d").date() if date else datetime.now().date()
-    
-    # Check if already tracked for this date
-    existing = db.query(HabitActivity).filter(
-        HabitActivity.habit_id == habit_id,
-        HabitActivity.user_id == user_id,
-        HabitActivity.date == activity_date
-    ).first()
-    
-    if existing:
-        raise HTTPException(status_code=400, detail="Habit already tracked for this date")
-    
-    # Create new activity
-    activity = HabitActivity(
-        user_id=user_id,
-        habit_id=habit_id,
-        date=activity_date
-    )
-    db.add(activity)
-    db.commit()
-    
-    return {"message": "Habit tracked successfully"}
+    return habit
 
-@app.get("/api/users/{user_id}/habit-activity")
-def get_habit_activity(user_id: int, db: Session = Depends(get_db)):
+@app.put("/api/users/{user_id}/habits/{habit_id}", response_model=HabitResponse)
+def update_habit(user_id: int, habit_id: int, habit_update: HabitUpdate, db: Session = Depends(get_db)):
     get_user_or_404(db, user_id)
     
-    # Get the date range (past year)
-    today = datetime.now().date()
-    one_year_ago = today - timedelta(days=365)
+    habit = db.query(Habit).filter(
+        Habit.id == habit_id, 
+        Habit.user_id == user_id
+    ).first()
     
-    # Get all habit activities for the user in the date range
-    activities = db.query(HabitActivity).filter(
-        HabitActivity.user_id == user_id,
-        HabitActivity.date >= one_year_ago,
-        HabitActivity.date <= today
-    ).all()
+    if habit is None:
+        raise HTTPException(status_code=404, detail="Habit not found")
     
-    # Create a dictionary to count activities per day
-    activity_counts = {}
-    for activity in activities:
-        date_str = activity.date.isoformat()
-        if date_str in activity_counts:
-            activity_counts[date_str] += 1
+    # Update only the fields that are provided
+    update_data = habit_update.dict(exclude_unset=True)
+    
+    for key, value in update_data.items():
+        setattr(habit, key, value)
+    
+    db.commit()
+    db.refresh(habit)
+    return habit
+
+@app.delete("/api/users/{user_id}/habits/{habit_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_habit(user_id: int, habit_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    habit = db.query(Habit).filter(
+        Habit.id == habit_id, 
+        Habit.user_id == user_id
+    ).first()
+    
+    if habit is None:
+        raise HTTPException(status_code=404, detail="Habit not found")
+    
+    # Delete associated activities
+    db.query(HabitActivity).filter(HabitActivity.habit_id == habit_id).delete()
+    
+    db.delete(habit)
+    db.commit()
+    return None
+
+@app.post("/api/users/{user_id}/habits/{habit_id}/track", response_model=HabitActivityResponse)
+def track_habit(
+    user_id: int, 
+    habit_id: int, 
+    activity: HabitActivityCreate, 
+    db: Session = Depends(get_db)
+):
+    get_user_or_404(db, user_id)
+    
+    habit = db.query(Habit).filter(
+        Habit.id == habit_id, 
+        Habit.user_id == user_id
+    ).first()
+    
+    if habit is None:
+        raise HTTPException(status_code=404, detail="Habit not found")
+    
+    # Check if activity already exists for this date
+    existing_activity = db.query(HabitActivity).filter(
+        HabitActivity.habit_id == habit_id,
+        HabitActivity.date == activity.date
+    ).first()
+    
+    if existing_activity:
+        # Update existing activity
+        if activity.status == 'none':
+            # Delete the activity if status is none
+            db.delete(existing_activity)
+            db.commit()
+            return HabitActivityResponse(
+                id=0,
+                habit_id=habit_id,
+                date=activity.date,
+                status='none'
+            )
         else:
-            activity_counts[date_str] = 1
+            existing_activity.status = activity.status
+            existing_activity.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(existing_activity)
+            return existing_activity
+    elif activity.status != 'none':
+        # Create new activity only if status is not none
+        new_activity = HabitActivity(
+            user_id=user_id,
+            habit_id=habit_id,
+            date=activity.date,
+            status=activity.status
+        )
+        db.add(new_activity)
+        db.commit()
+        db.refresh(new_activity)
+        return new_activity
+    else:
+        # Return a dummy response for 'none' status when no activity exists
+        return HabitActivityResponse(
+            id=0,
+            habit_id=habit_id,
+            date=activity.date,
+            status='none'
+        )
+
+@app.get("/api/users/{user_id}/habit-activities")
+def get_habit_activities(
+    user_id: int, 
+    habit_id: Optional[int] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    get_user_or_404(db, user_id)
     
-    # Generate the full date range with counts
+    query = db.query(HabitActivity).filter(HabitActivity.user_id == user_id)
+    
+    if habit_id:
+        query = query.filter(HabitActivity.habit_id == habit_id)
+    
+    if start_date:
+        query = query.filter(HabitActivity.date >= start_date)
+    
+    if end_date:
+        query = query.filter(HabitActivity.date <= end_date)
+    
+    activities = query.all()
+    
+    # Convert to response format
     result = []
-    current_date = one_year_ago
-    while current_date <= today:
-        date_str = current_date.isoformat()
-        count = activity_counts.get(date_str, 0)
-        # Cap the count at 4 for the GitHub-style 5-level heatmap (0-4)
-        count = min(count, 4)
+    for activity in activities:
         result.append({
-            "date": date_str,
-            "count": count
+            "id": activity.id,
+            "habit_id": activity.habit_id,
+            "date": activity.date.isoformat(),
+            "status": activity.status
         })
-        current_date += timedelta(days=1)
     
     return result
+
+@app.get("/api/users/{user_id}/habit-stats")
+def get_habit_stats(
+    user_id: int, 
+    habit_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    get_user_or_404(db, user_id)
+    
+    # Get all habits for the user
+    habits_query = db.query(Habit).filter(Habit.user_id == user_id)
+    
+    if habit_id:
+        habits_query = habits_query.filter(Habit.id == habit_id)
+    
+    habits = habits_query.all()
+    
+    # Calculate stats for each habit
+    result = []
+    for habit in habits:
+        # Get all activities for this habit
+        activities = db.query(HabitActivity).filter(
+            HabitActivity.habit_id == habit.id,
+            HabitActivity.status == 'done'
+        ).all()
+        
+        # Calculate current streak
+        today = date.today()
+        current_streak = 0
+        
+        # Check backwards from yesterday
+        check_date = today - timedelta(days=1)
+        
+        while True:
+            activity = db.query(HabitActivity).filter(
+                HabitActivity.habit_id == habit.id,
+                HabitActivity.date == check_date
+            ).first()
+            
+            if activity and activity.status == 'done':
+                current_streak += 1
+                check_date -= timedelta(days=1)
+            else:
+                # Check if there's a skipped activity
+                skipped = db.query(HabitActivity).filter(
+                    HabitActivity.habit_id == habit.id,
+                    HabitActivity.date == check_date,
+                    HabitActivity.status == 'skipped'
+                ).first()
+                
+                if skipped:
+                    # Skipped days don't break the streak
+                    check_date -= timedelta(days=1)
+                else:
+                    break
+        
+        # Calculate completion rate
+        total_days = (today - habit.created_at.date()).days + 1
+        completion_rate = len(activities) / total_days if total_days > 0 else 0
+        
+        result.append({
+            "habit_id": habit.id,
+            "title": habit.title,
+            "frequency": habit.frequency,
+            "total_completions": len(activities),
+            "current_streak": current_streak,
+            "completion_rate": round(completion_rate * 100, 2)
+        })
+    
+    return result
+
 
 # Goal endpoints
 @app.post("/api/users/{user_id}/goals", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
@@ -277,27 +649,6 @@ def get_notes(user_id: int, db: Session = Depends(get_db)):
     get_user_or_404(db, user_id)
     notes = db.query(Note).filter(Note.user_id == user_id).all()
     return notes
-
-# Todo item endpoints
-@app.post("/api/users/{user_id}/todo_items", response_model=TodoItemResponse, status_code=status.HTTP_201_CREATED)
-def create_todo_item(user_id: int, todo_item: TodoItemCreate, db: Session = Depends(get_db)):
-    get_user_or_404(db, user_id)
-    
-    db_todo_item = TodoItem(
-        user_id=user_id,
-        title=todo_item.title,
-        completed=todo_item.completed
-    )
-    db.add(db_todo_item)
-    db.commit()
-    db.refresh(db_todo_item)
-    return db_todo_item
-
-@app.get("/api/users/{user_id}/todo_items", response_model=List[TodoItemResponse])
-def get_todo_items(user_id: int, db: Session = Depends(get_db)):
-    get_user_or_404(db, user_id)
-    todo_items = db.query(TodoItem).filter(TodoItem.user_id == user_id).all()
-    return todo_items
 
 # Calendar event endpoints
 @app.post("/api/users/{user_id}/calendar_events", response_model=CalendarEventResponse, status_code=status.HTTP_201_CREATED)
@@ -624,3 +975,232 @@ def get_user_profile(user_id: int, db: Session = Depends(get_db)):
         "upcomingEvents": upcoming_events,
         "goalProgress": goal_progress
     }
+
+# Goal endpoints
+@app.post("/api/users/{user_id}/goals", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
+def create_goal(user_id: int, goal: GoalCreate, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    # If goal is marked as completed, set progress to 100%
+    if goal.completed and goal.progress < 100:
+        goal.progress = 100
+    
+    db_goal = Goal(
+        user_id=user_id,
+        title=goal.title,
+        description=goal.description,
+        progress=goal.progress,
+        completed=goal.completed
+    )
+    db.add(db_goal)
+    db.commit()
+    db.refresh(db_goal)
+    return db_goal
+
+@app.get("/api/users/{user_id}/goals", response_model=List[GoalResponse])
+def get_goals(
+    user_id: int, 
+    completed: Optional[bool] = None,
+    db: Session = Depends(get_db)
+):
+    get_user_or_404(db, user_id)
+    
+    query = db.query(Goal).filter(Goal.user_id == user_id)
+    
+    if completed is not None:
+        query = query.filter(Goal.completed == completed)
+    
+    goals = query.order_by(Goal.created_at.desc()).all()
+    return goals
+
+@app.get("/api/users/{user_id}/goals/{goal_id}", response_model=GoalResponse)
+def get_goal(user_id: int, goal_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    goal = db.query(Goal).filter(
+        Goal.id == goal_id, 
+        Goal.user_id == user_id
+    ).first()
+    
+    if goal is None:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    return goal
+
+@app.put("/api/users/{user_id}/goals/{goal_id}", response_model=GoalResponse)
+def update_goal(user_id: int, goal_id: int, goal_update: GoalUpdate, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    goal = db.query(Goal).filter(
+        Goal.id == goal_id, 
+        Goal.user_id == user_id
+    ).first()
+    
+    if goal is None:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    # Update only the fields that are provided
+    update_data = goal_update.dict(exclude_unset=True)
+    
+    # If goal is being marked as completed, set progress to 100%
+    if update_data.get('completed') and not goal.completed:
+        update_data['progress'] = 100
+    
+    # If progress is being set to 100%, mark as completed
+    if update_data.get('progress') == 100 and not goal.completed:
+        update_data['completed'] = True
+    
+    # If goal is being marked as not completed, and progress was 100%, reset progress
+    if 'completed' in update_data and not update_data['completed'] and goal.progress == 100:
+        update_data['progress'] = 0
+    
+    for key, value in update_data.items():
+        setattr(goal, key, value)
+    
+    goal.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(goal)
+    return goal
+
+@app.put("/api/users/{user_id}/goals/{goal_id}/progress", response_model=GoalResponse)
+def update_goal_progress(
+    user_id: int, 
+    goal_id: int, 
+    progress_update: GoalProgressUpdate, 
+    db: Session = Depends(get_db)
+):
+    get_user_or_404(db, user_id)
+    
+    goal = db.query(Goal).filter(
+        Goal.id == goal_id, 
+        Goal.user_id == user_id
+    ).first()
+    
+    if goal is None:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    # Update progress
+    goal.progress = progress_update.progress
+    
+    # If progress is 100%, mark as completed
+    if goal.progress == 100:
+        goal.completed = True
+    # If progress is less than 100% but goal was completed, mark as not completed
+    elif goal.progress < 100 and goal.completed:
+        goal.completed = False
+    
+    goal.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(goal)
+    return goal
+
+@app.delete("/api/users/{user_id}/goals/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_goal(user_id: int, goal_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    goal = db.query(Goal).filter(
+        Goal.id == goal_id, 
+        Goal.user_id == user_id
+    ).first()
+    
+    if goal is None:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    db.delete(goal)
+    db.commit()
+    return None
+
+# Todo endpoints
+@app.post("/api/users/{user_id}/todos", response_model=TodoItemResponse, status_code=status.HTTP_201_CREATED)
+def create_todo(user_id: int, todo: TodoItemCreate, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    db_todo = TodoItem(
+        user_id=user_id,
+        title=todo.title
+    )
+    db.add(db_todo)
+    db.commit()
+    db.refresh(db_todo)
+    return db_todo
+
+@app.get("/api/users/{user_id}/todos", response_model=List[TodoItemResponse])
+def get_todos(
+    user_id: int, 
+    completed: Optional[bool] = None,
+    db: Session = Depends(get_db)
+):
+    get_user_or_404(db, user_id)
+    
+    query = db.query(TodoItem).filter(TodoItem.user_id == user_id)
+    
+    if completed is not None:
+        query = query.filter(TodoItem.completed == completed)
+    
+    todos = query.order_by(TodoItem.created_at).all()
+    return todos
+
+@app.get("/api/users/{user_id}/todos/{todo_id}", response_model=TodoItemResponse)
+def get_todo(user_id: int, todo_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    todo = db.query(TodoItem).filter(
+        TodoItem.id == todo_id, 
+        TodoItem.user_id == user_id
+    ).first()
+    
+    if todo is None:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    
+    return todo
+
+@app.put("/api/users/{user_id}/todos/{todo_id}", response_model=TodoItemResponse)
+def update_todo(user_id: int, todo_id: int, todo_update: TodoItemUpdate, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    todo = db.query(TodoItem).filter(
+        TodoItem.id == todo_id, 
+        TodoItem.user_id == user_id
+    ).first()
+    
+    if todo is None:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    
+    # Update only the fields that are provided
+    update_data = todo_update.dict(exclude_unset=True)
+    
+    for key, value in update_data.items():
+        setattr(todo, key, value)
+    
+    todo.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(todo)
+    return todo
+
+@app.delete("/api/users/{user_id}/todos/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_todo(user_id: int, todo_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    todo = db.query(TodoItem).filter(
+        TodoItem.id == todo_id, 
+        TodoItem.user_id == user_id
+    ).first()
+    
+    if todo is None:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    
+    db.delete(todo)
+    db.commit()
+    return None
+
+@app.delete("/api/users/{user_id}/todos/clear-completed", status_code=status.HTTP_204_NO_CONTENT)
+def clear_completed_todos(user_id: int, db: Session = Depends(get_db)):
+    get_user_or_404(db, user_id)
+    
+    db.query(TodoItem).filter(
+        TodoItem.user_id == user_id,
+        TodoItem.completed == True
+    ).delete(synchronize_session=False)
+    
+    db.commit()
+    return None

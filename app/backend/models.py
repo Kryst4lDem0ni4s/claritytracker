@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, Boolean, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import os
 from typing import List, Optional
 from pydantic import BaseModel, Field
@@ -19,40 +19,6 @@ class User(Base):
     password = Column(String)  # In a real app, this should be hashed
     created_at = Column(DateTime, default=datetime.utcnow)
 
-
-
-class Habit(Base):
-    __tablename__ = "habits"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    title = Column(String, index=True)
-    frequency = Column(String)  # daily, weekly, etc.
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    user = relationship("User", backref="habits")
-
-class HabitActivity(Base):
-    __tablename__ = "habit_activities"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    habit_id = Column(Integer, ForeignKey('habits.id'))
-    date = Column(Date, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    user = relationship("User", backref="habit_activities")
-    habit = relationship("Habit", backref="activities")
-
-class Goal(Base):
-    __tablename__ = "goals"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    title = Column(String, index=True)
-    description = Column(Text, nullable=True)
-    progress = Column(Integer, default=0)  # 0-100 percent
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    user = relationship("User", backref="goals")
-
 class Note(Base):
     __tablename__ = "notes"
     id = Column(Integer, primary_key=True, index=True)
@@ -63,16 +29,6 @@ class Note(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
     
     user = relationship("User", backref="notes")
-
-class TodoItem(Base):
-    __tablename__ = "todo_items"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    title = Column(String, index=True)
-    completed = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    user = relationship("User", backref="todo_items")
     
 class Project(Base):
     __tablename__ = "projects"
@@ -89,26 +45,9 @@ class UserCreate(BaseModel):
     username: str
     password: str
 
-
-class GoalCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    progress: Optional[int] = 0
-
-class HabitCreate(BaseModel):
-    title: str
-    frequency: str
-
 class NoteCreate(BaseModel):
     content: str
 
-class TodoItemCreate(BaseModel):
-    title: str
-    completed: Optional[bool] = False
-
-    
-    class Config:
-        orm_mode = True
 
 class ProjectCreate(BaseModel):
     name: str
@@ -119,6 +58,18 @@ class AnalyticsDataCreate(BaseModel):
     data_json: str
     
         
+# Task category model
+class TaskCategory(Base):
+    __tablename__ = "task_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    name = Column(String, index=True)
+    color = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", backref="task_categories")
+
+# Update Task model to include additional fields
 class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True, index=True)
@@ -127,22 +78,115 @@ class Task(Base):
     description = Column(Text, nullable=True)
     due_date = Column(Date, nullable=True)
     completed = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.now(datetime.timezone.utc))
+    priority = Column(String, nullable=True)  # high, medium, low
+    category_id = Column(Integer, ForeignKey('task_categories.id'), nullable=True)
+    order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     user = relationship("User", backref="tasks")
-    
-class TaskCreate(BaseModel):
+    category = relationship("TaskCategory", backref="tasks")
+
+# Pydantic models for task categories
+class TaskCategoryBase(BaseModel):
+    name: str
+    color: Optional[str] = None
+
+class TaskCategoryCreate(TaskCategoryBase):
     pass
-    
-class TaskResponse(BaseModel):
+
+class TaskCategoryResponse(TaskCategoryBase):
     id: int
     user_id: int
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+# Update Task Pydantic models
+class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
-    due_date: Optional[datetime] = None
-    completed: bool
+    due_date: Optional[date] = None
+    completed: bool = False
+    priority: Optional[str] = None
+    category_id: Optional[int] = None
+    order: Optional[int] = None
+
+class TaskCreate(TaskBase):
+    pass
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[date] = None
+    completed: Optional[bool] = None
+    priority: Optional[str] = None
+    category_id: Optional[int] = None
+    order: Optional[int] = None
+
+class TaskResponse(TaskBase):
+    id: int
+    user_id: int
     created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+# Task reordering model
+class TaskReorderItem(BaseModel):
+    id: int
+    order: int
+
+class TaskReorderRequest(BaseModel):
+    taskIds: List[TaskReorderItem]  
+
+class Habit(Base):
+    __tablename__ = "habits"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    title = Column(String, index=True)
+    frequency = Column(String)  # daily, weekly, etc.
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", backref="habits")
+
+class HabitBase(BaseModel):
+    title: str
+    frequency: str = "daily"  # daily, weekly, monthly
+
+class HabitCreate(HabitBase):
+    pass
+
+class HabitResponse(HabitBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True
+
+class HabitActivity(Base):
+    __tablename__ = "habit_activities"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    habit_id = Column(Integer, ForeignKey('habits.id'))
+    date = Column(Date, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", backref="habit_activities")
+    habit = relationship("Habit", backref="activities")
+    
+class HabitActivityCreate(BaseModel):
+    date: date
+    status: str  # done, skipped, none
+
+class HabitActivityResponse(BaseModel):
+    id: int
+    habit_id: int
+    date: date
+    status: str
     
     class Config:
         orm_mode = True
@@ -166,21 +210,40 @@ class UserCreate(BaseModel):
     password: str
 
 
-class GoalCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    progress: Optional[int] = 0
-
-class HabitCreate(BaseModel):
-    title: str
-    frequency: str
-
 class NoteCreate(BaseModel):
     content: str
 
+class TodoItem(Base):
+    __tablename__ = "todo_items"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    title = Column(String, index=True)
+    completed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = relationship("User", backref="todo_items")
+
+# Pydantic models for todos
+class TodoItemBase(BaseModel):
+    title: str
+    completed: bool = False
+
 class TodoItemCreate(BaseModel):
     title: str
-    completed: Optional[bool] = False
+
+class TodoItemUpdate(BaseModel):
+    title: Optional[str] = None
+    completed: Optional[bool] = None
+
+class TodoItemResponse(TodoItemBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        orm_mode = True
 
 
 class ProjectCreate(BaseModel):
@@ -205,41 +268,6 @@ class UserResponse(UserBase):
     class Config:
         orm_mode = True
 
-
-
-# Habit models
-class HabitBase(BaseModel):
-    title: str
-    frequency: str = "daily"  # daily, weekly, monthly
-
-class HabitCreate(HabitBase):
-    pass
-
-class HabitResponse(HabitBase):
-    id: int
-    user_id: int
-    created_at: datetime
-    
-    class Config:
-        orm_mode = True
-
-# Goal models
-class GoalBase(BaseModel):
-    title: str
-    description: Optional[str] = None
-    progress: int = Field(0, ge=0, le=100)  # 0-100%
-
-class GoalCreate(GoalBase):
-    pass
-
-class GoalResponse(GoalBase):
-    id: int
-    user_id: int
-    created_at: datetime
-    
-    class Config:
-        orm_mode = True
-
 # Note models
 class NoteBase(BaseModel):
     title: Optional[str] = "Untitled"
@@ -253,22 +281,6 @@ class NoteResponse(NoteBase):
     user_id: int
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        orm_mode = True
-
-# Todo item models
-class TodoItemBase(BaseModel):
-    title: str
-    completed: bool = False
-
-class TodoItemCreate(TodoItemBase):
-    pass
-
-class TodoItemResponse(TodoItemBase):
-    id: int
-    user_id: int
-    created_at: datetime
     
     class Config:
         orm_mode = True
@@ -289,10 +301,46 @@ class ProjectResponse(ProjectBase):
     class Config:
         orm_mode = True
 
-# Add this to your models.py file
+class Goal(Base):
+    __tablename__ = "goals"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    title = Column(String, index=True)
+    description = Column(Text, nullable=True)
+    progress = Column(Integer, default=0)  # 0-100 percent
+    completed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = relationship("User", backref="goals")
+
+# Pydantic models for goals
+class GoalBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    progress: int = Field(0, ge=0, le=100)
+    completed: bool = False
+
+class GoalCreate(GoalBase):
+    pass
+
+class GoalUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    progress: Optional[int] = Field(None, ge=0, le=100)
+    completed: Optional[bool] = None
+
+class GoalResponse(GoalBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        orm_mode = True
+
 class GoalProgressUpdate(BaseModel):
     progress: int = Field(..., ge=0, le=100)
-
 
 # Update the CalendarEvent model to include time and location
 class CalendarEvent(Base):
@@ -327,3 +375,4 @@ class CalendarEventResponse(CalendarEventBase):
 
     class Config:
         orm_mode = True
+    

@@ -1,12 +1,12 @@
 // src/pages/HomePage.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import DashboardSummary from '../components/dashboard/DashboardSummary';
-import ContributionGraph from '../components/habits/ContributionGraph';
-import RecentTasks from '../components/tasks/RecentTasks';
-import UpcomingEvents from '../components/calendar/UpcomingEvents';
-import QuickAdd from '../components/common/QuickAdd';
-import GoalProgress from '../components/goals/GoalProgress';
+import DashboardSummary from '../components/DashboardSummary';
+import ContributionGraph from '../components/ContributionGraph';
+import RecentTasks from '../components/RecentTasks';
+import UpcomingEvents from '../components/UpcomingEvents';
+import QuickAdd from '../components/QuickAdd';
+import GoalProgress from '../components/GoalProgress';
 import '../styles/HomePage.css';
 
 const HomePage = () => {
